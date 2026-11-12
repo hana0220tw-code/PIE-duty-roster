@@ -304,22 +304,8 @@
     // ⚠️ Firebase 設定：請將您在 Firebase 申請的金鑰貼在此處
     // ========================================================
     const firebaseConfig = {
-      apiKey: "apiKey: "AIzaSyAzZsltuRMKX45zgts_rv4sPlZho4N_ps4",
-  authDomain: "pie1-4-duty-roster.firebaseapp.com",
-  databaseURL: "https://pie1-4-duty-roster-default-rtdb.firebaseio.com",
-  projectId: "pie1-4-duty-roster",
-  storageBucket: "pie1-4-duty-roster.firebasestorage.app",
-  messagingSenderId: "67862212398",
-  appId: "1:67862212398:web:8d4deb9384c144e5d454bf",
-  measurementId: "G-GP2ZPC8P9F",
-      authDomain: "apiKey: "AIzaSyAzZsltuRMKX45zgts_rv4sPlZho4N_ps4",
-  authDomain: "pie1-4-duty-roster.firebaseapp.com",
-  databaseURL: "https://pie1-4-duty-roster-default-rtdb.firebaseio.com",
-  projectId: "pie1-4-duty-roster",
-  storageBucket: "pie1-4-duty-roster.firebasestorage.app",
-  messagingSenderId: "67862212398",
-  appId: "1:67862212398:web:8d4deb9384c144e5d454bf",
-  measurementId: "G-GP2ZPC8P9F.firebaseapp.com",
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
       databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
       projectId: "YOUR_PROJECT_ID",
       storageBucket: "YOUR_PROJECT_ID.appspot.com",
@@ -982,7 +968,7 @@
           if (imported.auditLogs) auditLogs = imported.auditLogs;
 
           localStorage.setItem('duty_members', JSON.stringify(members));
-          localStorage.setItem('duty_overrides', JSON.stringify(overrides));
+          localStorage.setItem('dutyㄇ_overrides', JSON.stringify(overrides));
           localStorage.setItem('duty_audit_logs', JSON.stringify(auditLogs));
 
           syncToFirebase();
