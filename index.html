@@ -12,6 +12,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
   <style>
+    /* 滾動條美化 */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: #f1f5f9; }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
@@ -27,8 +28,11 @@
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col font-sans">
 
+  <!-- ========================================== -->
   <!-- 頂部整組凍結容器 (Sticky Header Wrapper) -->
+  <!-- ========================================== -->
   <div class="sticky-header-container border-b border-slate-200">
+
     <!-- 1. 頂部深色導航列 -->
     <header class="bg-slate-900 text-white px-4 py-2.5 flex flex-wrap justify-between items-center gap-2">
       <div class="flex items-center space-x-2">
@@ -77,6 +81,7 @@
         </button>
       </div>
 
+      <!-- 核心功能按鈕 -->
       <div class="flex items-center space-x-2">
         <button onclick="autoScheduleCurrentMonth()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm text-xs font-semibold flex items-center space-x-1.5 transition">
           <i class="fa-solid fa-wand-magic-sparkles"></i>
@@ -97,7 +102,7 @@
       </div>
     </div>
 
-    <!-- 3. 圖例說明列 -->
+    <!-- 3. 圖例說明列 (已刪除含4/30備註) -->
     <div id="sticky-legend-bar" class="px-4 py-1.5 bg-slate-50/90 text-xs text-slate-600 flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-slate-200">
       <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-slate-200 border border-slate-300"></span> AOI / KLA 分析 (工作日週輪)</span>
       <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-sky-200 border border-sky-300"></span> 平日值班 (工作日週輪)</span>
@@ -118,8 +123,11 @@
     </div>
   </div>
 
+  <!-- ========================================== -->
   <!-- 主內容視圖 (Views) -->
+  <!-- ========================================== -->
   <main class="flex-1 max-w-7xl w-full mx-auto p-2 md:p-4">
+
     <!-- 視圖 1: 班表月曆 -->
     <div id="view-calendar" class="space-y-4">
       <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -127,7 +135,7 @@
       </div>
     </div>
 
-    <!-- 視圖 2: 輪替規則設定 -->
+    <!-- 視圖 2: 輪替規則設定 (四軌人工自訂起點與順序) -->
     <div id="view-rules" class="hidden space-y-4">
       <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
         <div class="flex justify-between items-center mb-4">
@@ -136,7 +144,10 @@
             <p class="text-xs text-slate-500 mt-0.5">可自訂生效起始日、起始人員與輪替順序。生效日後將自動採用新輪替順序運算！</p>
           </div>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="rules-cards-container"></div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="rules-cards-container">
+          <!-- 規則卡片由 JS 動態生成 -->
+        </div>
       </div>
     </div>
 
@@ -174,4 +185,1095 @@
     <!-- 視圖 4: 異動紀錄 (Audit Log) -->
     <div id="view-logs" class="hidden space-y-4">
       <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-        <div class="flex justify-between i
+        <div class="flex justify-between items-center mb-4">
+          <div>
+            <h2 class="text-base font-bold text-slate-800">換班與規則修訂稽核歷程 (Audit Log)</h2>
+            <p class="text-xs text-slate-500 mt-0.5">所有換班與規則調整均強制登記修改者姓名、時間與原因，透明防竄改</p>
+          </div>
+          <button onclick="clearAuditLogs()" class="text-xs text-rose-600 hover:underline">清空歷史紀錄</button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs md:text-sm">
+            <thead class="bg-slate-50 text-slate-600 border-y border-slate-200">
+              <tr>
+                <th class="py-2.5 px-3">時間戳記</th>
+                <th class="py-2.5 px-3">修改者</th>
+                <th class="py-2.5 px-3">類別</th>
+                <th class="py-2.5 px-3">項目 / 生效日</th>
+                <th class="py-2.5 px-3">原狀態</th>
+                <th class="py-2.5 px-3">修訂為</th>
+                <th class="py-2.5 px-3">修訂原因</th>
+              </tr>
+            </thead>
+            <tbody id="log-table-body" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ========================================== -->
+  <!-- 彈出視窗 1: 換班視窗 (連續區間與7日防呆 + 修改者下拉選單) -->
+  <!-- ========================================== -->
+  <div id="swap-modal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-100">
+      <div class="px-5 py-4 bg-slate-900 text-white flex justify-between items-center">
+        <div class="flex items-center space-x-2">
+          <i class="fa-solid fa-arrows-rotate text-indigo-400"></i>
+          <h3 class="font-bold text-sm">值班調整與換班申請</h3>
+        </div>
+        <button onclick="closeSwapModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <div class="p-5 space-y-4 text-xs">
+        <div class="bg-indigo-50/60 border border-indigo-100 p-3 rounded-lg flex items-center justify-between">
+          <div>
+            <span class="text-indigo-500 font-medium block text-[11px]">目標班別</span>
+            <span id="swap-shift-type" class="font-bold text-indigo-900 text-sm"></span>
+          </div>
+          <div class="text-right">
+            <span class="text-indigo-500 font-medium block text-[11px]">原負責人</span>
+            <span id="swap-current-assignee" class="font-bold text-indigo-900 text-sm"></span>
+          </div>
+        </div>
+
+        <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-slate-700 flex items-center gap-1">
+              <i class="fa-solid fa-bolt text-amber-500"></i>批次選取連續日期（如週一至週五）
+            </span>
+          </div>
+          <div class="flex items-center gap-2">
+            <input type="date" id="range-start" class="w-full border border-slate-300 rounded px-2 py-1 bg-white text-xs">
+            <span class="text-slate-400">至</span>
+            <input type="date" id="range-end" class="w-full border border-slate-300 rounded px-2 py-1 bg-white text-xs">
+            <button type="button" onclick="addDateRangeToSwap()" class="px-2.5 py-1 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-200 rounded font-semibold whitespace-nowrap">
+              + 加入區間
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">已選定異動日期清單：</label>
+          <div id="swap-dates-chips" class="flex flex-wrap gap-1.5 p-2 bg-slate-50 rounded-lg border border-slate-200 max-h-24 overflow-y-auto"></div>
+        </div>
+
+        <div class="space-y-3 pt-1">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">指派新負責人 *</label>
+            <select id="swap-new-assignee" class="w-full border border-slate-300 rounded-lg p-2 bg-white text-xs"></select>
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">修改者姓名 (下拉選單選取) *</label>
+            <select id="swap-modifier" class="w-full border border-slate-300 rounded-lg p-2 bg-white text-xs"></select>
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">換班具體原因 *</label>
+            <input type="text" id="swap-reason" placeholder="例如：特休代班、外部客戶會議等" class="w-full border border-slate-300 rounded-lg p-2 text-xs">
+          </div>
+        </div>
+
+        <div id="swap-alarm-alert" class="hidden p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 flex items-start gap-2.5">
+          <i class="fa-solid fa-triangle-exclamation text-base mt-0.5"></i>
+          <div>
+            <div class="font-bold text-xs">連續值勤安全阻擋 (ALARM)</div>
+            <div id="swap-alarm-msg" class="text-[11px] mt-0.5">該員連續值班將超過 7 天，依防疲勞規範禁止換班！</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="px-5 py-3 bg-slate-50 border-t border-slate-200 flex justify-end space-x-2">
+        <button onclick="closeSwapModal()" class="px-3.5 py-1.5 rounded-lg border border-slate-300 text-slate-600 hover:bg-white text-xs font-medium">取消</button>
+        <button onclick="confirmSwapShift()" class="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-sm transition">確認儲存並同步</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- 彈出視窗 2: 輪替規則設定視窗 (修改者下拉選單) -->
+  <!-- ========================================== -->
+  <div id="rule-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-100 text-xs">
+      <div class="px-5 py-3.5 bg-slate-900 text-white flex justify-between items-center">
+        <h3 class="font-bold text-sm" id="rule-modal-title">設定輪替規則</h3>
+        <button onclick="closeRuleModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="p-5 space-y-3.5">
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">生效起始日期 (從此日開始套用新輪替) *</label>
+          <input type="date" id="rule-start-date" class="w-full border border-slate-300 rounded-lg p-2 bg-white text-xs">
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">起始日當週/當日負責人 *</label>
+          <select id="rule-start-person" class="w-full border border-slate-300 rounded-lg p-2 bg-white text-xs"></select>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">後續輪替順序 (以逗號或空格分隔同仁姓名) *</label>
+          <input type="text" id="rule-sequence-input" placeholder="例如：Henry, Wendy, Tim" class="w-full border border-slate-300 rounded-lg p-2 text-xs">
+          <p class="text-[11px] text-slate-500 mt-1">系統將從起始人開始，依照上方清單循環輪替。</p>
+        </div>
+
+        <div class="border-t border-slate-100 pt-3 space-y-2">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">修改者姓名 (下拉選單選取) *</label>
+            <select id="rule-modifier" class="w-full border border-slate-300 rounded-lg p-2 bg-white text-xs"></select>
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">修訂原因 *</label>
+            <input type="text" id="rule-reason" placeholder="例如：新成員加入、部門輪班軌道重組" class="w-full border border-slate-300 rounded-lg p-2 text-xs">
+          </div>
+        </div>
+      </div>
+
+      <div class="px-5 py-3 bg-slate-50 border-t border-slate-200 flex justify-end space-x-2">
+        <button onclick="closeRuleModal()" class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-600 hover:bg-white text-xs font-medium">取消</button>
+        <button onclick="saveRuleConfig()" class="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-sm transition">儲存並立即套用</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- 彈出視窗 3: 人員編輯視窗 -->
+  <!-- ========================================== -->
+  <div id="member-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-5 space-y-4 border border-slate-100 text-xs">
+      <div class="flex justify-between items-center border-b pb-2">
+        <h3 class="font-bold text-sm text-slate-800">編輯成員資訊</h3>
+        <button onclick="closeMemberModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div>
+        <label class="block font-semibold mb-1">同仁姓名</label>
+        <input type="text" id="member-name-input" class="w-full border rounded-lg p-2">
+      </div>
+      <div>
+        <label class="block font-semibold mb-1">代表可愛動物</label>
+        <div id="avatar-picker-grid" class="grid grid-cols-5 gap-2 p-2 border rounded-lg max-h-36 overflow-y-auto"></div>
+      </div>
+      <div class="space-y-1 pt-1">
+        <label class="block font-semibold mb-1">參與業務項目</label>
+        <label class="flex items-center space-x-2"><input type="checkbox" id="m-chk-aoi" class="rounded"><span>AOI Daily Analysis</span></label>
+        <label class="flex items-center space-x-2"><input type="checkbox" id="m-chk-kla" class="rounded"><span>KLA Daily Analysis</span></label>
+        <label class="flex items-center space-x-2"><input type="checkbox" id="m-chk-weekday" class="rounded"><span>平日值班</span></label>
+        <label class="flex items-center space-x-2"><input type="checkbox" id="m-chk-weekend" class="rounded"><span>假日值班</span></label>
+      </div>
+      <div class="flex justify-end space-x-2 border-t pt-3">
+        <button onclick="closeMemberModal()" class="px-3 py-1.5 border rounded-lg text-slate-600">取消</button>
+        <button onclick="saveMember()" class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg font-semibold">儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- JavaScript 核心引擎與 Firebase 雙向同步 -->
+  <!-- ========================================== -->
+  <script>
+    // ==========================================
+    // 1. Firebase 專案金鑰 (已為您精準綁定真實設定)
+    // ==========================================
+    const firebaseConfig = {
+      apiKey: "AIzaSyAzZsltuRMKX45zgts_rv4sPlZho4N_ps4",
+      authDomain: "pie1-4-duty-roster.firebaseapp.com",
+      databaseURL: "https://pie1-4-duty-roster-default-rtdb.firebaseio.com",
+      projectId: "pie1-4-duty-roster",
+      storageBucket: "pie1-4-duty-roster.firebasestorage.app",
+      messagingSenderId: "67862212398",
+      appId: "1:67862212398:web:8d4deb9384c144e5d454bf",
+      measurementId: "G-GP2ZPC8P9F"
+    };
+
+    let db = null;
+    let isFirebaseConnected = false;
+
+    // 20 款可愛動物
+    const ANIMAL_AVATARS = ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🐔', '🐧', '🦆', '🦉', '🦄'];
+
+    // 行政院人事行政總處最新官方行事曆 (含 4/30 勞動節補假)
+    const OFFICIAL_CALENDAR = {
+      '2026-01-01': '元旦',
+      '2026-02-16': '除夕',
+      '2026-02-17': '春節初一',
+      '2026-02-18': '春節初二',
+      '2026-02-19': '春節初三',
+      '2026-02-28': '和平紀念日',
+      '2026-04-03': '兒童節補假',
+      '2026-04-06': '清明節補假',
+      '2026-05-01': '勞動節',
+      '2026-06-19': '端午節',
+      '2026-09-25': '中秋節',
+      '2026-09-28': '教師節',
+      '2026-10-09': '國慶日補假',
+      '2026-10-25': '臺灣光復節',
+      '2026-12-25': '行憲紀念日',
+      '2027-01-01': '元旦',
+      '2027-02-04': '小年夜',
+      '2027-02-05': '除夕',
+      '2027-02-06': '春節初一',
+      '2027-02-07': '春節初二',
+      '2027-02-08': '春節初三',
+      '2027-02-09': '初一逢週末補假',
+      '2027-02-10': '初二逢週末補假',
+      '2027-02-28': '和平紀念日',
+      '2027-03-01': '228逢日補假',
+      '2027-04-04': '兒童節',
+      '2027-04-05': '清明節',
+      '2027-04-06': '兒童節補假',
+      '2027-04-30': '勞動節補假',
+      '2027-05-01': '勞動節',
+      '2027-06-09': '端午節',
+      '2027-09-15': '中秋節',
+      '2027-09-28': '教師節',
+      '2027-10-10': '國慶日',
+      '2027-10-11': '國慶日逢日補假',
+      '2027-10-25': '臺灣光復節',
+      '2027-12-24': '行憲紀念日逢六補假',
+      '2027-12-25': '行憲紀念日',
+      '2027-12-31': '2028元旦逢六補假'
+    };
+
+    const DEFAULT_MEMBERS = [
+      { id: '1', name: 'Roger', avatar: '🐶', isAoi: true, isKla: false, isWeekday: true, isWeekend: true },
+      { id: '2', name: 'Szuhua', avatar: '🐱', isAoi: true, isKla: false, isWeekday: true, isWeekend: true },
+      { id: '3', name: 'Henry', avatar: '🐻', isAoi: false, isKla: true, isWeekday: true, isWeekend: true },
+      { id: '4', name: 'Wendy', avatar: '🐰', isAoi: false, isKla: true, isWeekday: true, isWeekend: true },
+      { id: '5', name: 'Tim', avatar: '🐼', isAoi: false, isKla: true, isWeekday: true, isWeekend: true }
+    ];
+
+    // 四種值班預設輪替規則（支援多階段自訂）
+    const DEFAULT_RULE_CONFIGS = {
+      aoi: [
+        { startDate: '2026-11-09', startPerson: 'Roger', sequence: ['Roger', 'Szuhua'] }
+      ],
+      kla: [
+        { startDate: '2026-11-09', startPerson: 'Henry', sequence: ['Henry', 'Tim', 'Wendy'] }
+      ],
+      weekday: [
+        { startDate: '2026-11-09', startPerson: 'Tim', sequence: ['Tim', 'Roger', 'Wendy', 'Szuhua', 'Henry'] }
+      ],
+      weekend: [
+        { startDate: '2026-11-14', startPerson: 'Tim', sequence: ['Tim', 'Henry', 'Roger', 'Szuhua', 'Wendy'] }
+      ]
+    };
+
+    // 狀態變數 (開箱自動抓取「當前真實年月」)
+    const todayObj = new Date();
+    let currentYear = todayObj.getFullYear();
+    let currentMonth = todayObj.getMonth() + 1;
+
+    let members = JSON.parse(localStorage.getItem('duty_members')) || DEFAULT_MEMBERS;
+    let overrides = JSON.parse(localStorage.getItem('duty_overrides')) || {};
+    let auditLogs = JSON.parse(localStorage.getItem('duty_audit_logs')) || [];
+    let ruleConfigs = JSON.parse(localStorage.getItem('duty_rule_configs')) || DEFAULT_RULE_CONFIGS;
+
+    let currentSwapData = null;
+    let editingMemberId = null;
+    let selectedAvatar = '🐶';
+    let currentEditingRuleType = null;
+
+    // ==========================================
+    // 2. Firebase 即時連動
+    // ==========================================
+    function initFirebase() {
+      const statusEl = document.getElementById('syncStatus');
+      if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "YOUR_API_KEY") {
+        try {
+          firebase.initializeApp(firebaseConfig);
+          db = firebase.database();
+          isFirebaseConnected = true;
+
+          statusEl.className = "ml-2 text-[11px] px-2 py-0.5 rounded bg-emerald-900/60 text-emerald-200 border border-emerald-700/60 flex items-center gap-1";
+          statusEl.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span><span>Firebase 雲端即時連動中</span>`;
+
+          db.ref('dutyRoster').on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+              if (data.members) members = data.members;
+              if (data.overrides) overrides = data.overrides;
+              if (data.auditLogs) auditLogs = data.auditLogs;
+              if (data.ruleConfigs) ruleConfigs = data.ruleConfigs;
+
+              localStorage.setItem('duty_members', JSON.stringify(members));
+              localStorage.setItem('duty_overrides', JSON.stringify(overrides));
+              localStorage.setItem('duty_audit_logs', JSON.stringify(auditLogs));
+              localStorage.setItem('duty_rule_configs', JSON.stringify(ruleConfigs));
+
+              renderCalendar();
+              renderRulesView();
+              renderMembers();
+              renderAuditLogs();
+            } else {
+              syncToFirebase();
+            }
+          });
+        } catch (err) {
+          console.error("Firebase 連線失敗:", err);
+          fallbackToLocalStorage("連線異常，退回本地暫存");
+        }
+      } else {
+        fallbackToLocalStorage("未設定 Firebase 金鑰 (使用 LocalStorage)");
+      }
+    }
+
+    function fallbackToLocalStorage(msg) {
+      const statusEl = document.getElementById('syncStatus');
+      statusEl.className = "ml-2 text-[11px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 flex items-center gap-1";
+      statusEl.innerHTML = `<span>💻 ${msg}</span>`;
+    }
+
+    function syncToFirebase() {
+      if (isFirebaseConnected && db) {
+        db.ref('dutyRoster').set({
+          members: members,
+          overrides: overrides,
+          auditLogs: auditLogs,
+          ruleConfigs: ruleConfigs,
+          lastUpdated: new Date().toISOString()
+        });
+      }
+    }
+
+    // ==========================================
+    // 3. 多階段排班演算法 (支援自訂起點與順序)
+    // ==========================================
+    function mod(n, m) { return ((n % m) + m) % m; }
+
+    function formatDate(d) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+
+    function parseDate(str) {
+      const parts = str.split('-');
+      return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+    }
+
+    function checkIsOffDay(d) {
+      const day = d.getDay();
+      if (day === 0 || day === 6) return true;
+      const key = formatDate(d);
+      return !!OFFICIAL_CALENDAR[key];
+    }
+
+    function getActiveRule(shiftType, targetDateStr) {
+      const rules = ruleConfigs[shiftType] || [];
+      const sorted = [...rules].sort((a, b) => a.startDate.localeCompare(b.startDate));
+      let chosen = sorted[0];
+      for (let r of sorted) {
+        if (targetDateStr >= r.startDate) chosen = r;
+      }
+      return chosen;
+    }
+
+    function getWeekDiffFromAnchor(anchorStr, targetDate) {
+      const anchor = parseDate(anchorStr);
+      const target = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+      const dayOffset = (target.getDay() + 6) % 7;
+      target.setDate(target.getDate() - dayOffset);
+
+      const anchorOffset = (anchor.getDay() + 6) % 7;
+      anchor.setDate(anchor.getDate() - anchorOffset);
+
+      return Math.round((target - anchor) / (7 * 24 * 60 * 60 * 1000));
+    }
+
+    function getHolidayCountDiffFromAnchor(anchorStr, targetDate) {
+      let count = 0;
+      const t = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+      const a = parseDate(anchorStr);
+
+      if (t >= a) {
+        let cursor = new Date(a);
+        while (cursor < t) {
+          if (checkIsOffDay(cursor)) count++;
+          cursor.setDate(cursor.getDate() + 1);
+        }
+      } else {
+        let cursor = new Date(t);
+        while (cursor < a) {
+          if (checkIsOffDay(cursor)) count--;
+          cursor.setDate(cursor.getDate() + 1);
+        }
+      }
+      return count;
+    }
+
+    function getScheduledPerson(date, shiftType) {
+      const dateKey = formatDate(date);
+      if (overrides[dateKey] && overrides[dateKey][shiftType]) {
+        const p = members.find(m => m.name === overrides[dateKey][shiftType]);
+        return { name: overrides[dateKey][shiftType], avatar: p ? p.avatar : '👤', isOverridden: true };
+      }
+
+      const isOffDay = checkIsOffDay(date);
+      const rule = getActiveRule(shiftType, dateKey);
+      if (!rule || !rule.sequence || rule.sequence.length === 0) return null;
+
+      const seq = rule.sequence;
+      let startIndex = seq.indexOf(rule.startPerson);
+      if (startIndex === -1) startIndex = 0;
+
+      if (shiftType === 'weekend') {
+        if (!isOffDay) return null;
+        const diff = getHolidayCountDiffFromAnchor(rule.startDate, date);
+        const name = seq[mod(startIndex + diff, seq.length)];
+        const p = members.find(m => m.name === name);
+        return { name: name, avatar: p ? p.avatar : '👤', isOverridden: false };
+      } else {
+        if (isOffDay) return null;
+        const wDiff = getWeekDiffFromAnchor(rule.startDate, date);
+        const name = seq[mod(startIndex + wDiff, seq.length)];
+        const p = members.find(m => m.name === name);
+        return { name: name, avatar: p ? p.avatar : '👤', isOverridden: false };
+      }
+    }
+
+    // ==========================================
+    // 4. 畫面渲染 (圖片圖示置前關鍵修改)
+    // ==========================================
+    function renderCalendar() {
+      document.getElementById('current-month-display').innerText = `${currentYear} 年 ${currentMonth} 月`;
+      const grid = document.getElementById('calendar-grid');
+      grid.innerHTML = '';
+
+      const firstDay = new Date(currentYear, currentMonth - 1, 1);
+      const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
+      const startDayOffset = (firstDay.getDay() + 6) % 7;
+
+      for (let i = 0; i < startDayOffset; i++) {
+        const empty = document.createElement('div');
+        empty.className = 'min-h-[115px] bg-slate-50/60 p-1.5 border-b border-slate-200';
+        grid.appendChild(empty);
+      }
+
+      for (let d = 1; d <= daysInMonth; d++) {
+        const curDate = new Date(currentYear, currentMonth - 1, d);
+        const dateKey = formatDate(curDate);
+        const dayOfWeek = curDate.getDay();
+        const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+        const holidayName = OFFICIAL_CALENDAR[dateKey];
+        const isOffDay = isWeekend || !!holidayName;
+
+        const cell = document.createElement('div');
+        cell.className = `min-h-[115px] p-1.5 flex flex-col justify-between border-b border-slate-200 transition ${isOffDay ? 'bg-red-50/20' : 'bg-white'}`;
+
+        let headerHtml = `
+          <div class="flex justify-between items-start mb-1">
+            <span class="text-xs font-bold ${isOffDay ? 'text-red-600' : 'text-slate-700'}">${d}</span>
+            ${holidayName ? `<span class="text-[10px] px-1 py-0.5 rounded bg-red-100 text-red-700 font-semibold border border-red-200">🚩 ${holidayName}</span>` : ''}
+          </div>
+        `;
+
+        let bodyHtml = `<div class="space-y-1">`;
+
+        if (isOffDay) {
+          const weekendDuty = getScheduledPerson(curDate, 'weekend');
+          if (weekendDuty) {
+            bodyHtml += `
+              <div onclick="openSwapModal('${dateKey}', 'weekend', '${weekendDuty.name}')" 
+                   class="cursor-pointer p-1 rounded text-xs flex items-center justify-between border ${weekendDuty.isOverridden ? 'bg-amber-50 border-amber-300 text-amber-900 font-medium' : 'bg-rose-50 border-rose-200 text-rose-800'} hover:opacity-85 shadow-2xs">
+                <span class="truncate font-medium">${weekendDuty.avatar} ${weekendDuty.name} <span class="text-[10px] opacity-75">(假日)</span></span>
+                ${weekendDuty.isOverridden ? '<span class="text-[10px] text-amber-600">✏️</span>' : ''}
+              </div>
+            `;
+          }
+        } else {
+          const aoi = getScheduledPerson(curDate, 'aoi');
+          const kla = getScheduledPerson(curDate, 'kla');
+          const weekday = getScheduledPerson(curDate, 'weekday');
+
+          bodyHtml += `
+            <div class="bg-slate-100/90 border border-slate-200 p-1 rounded text-[11px] space-y-0.5 text-slate-700">
+              <div onclick="openSwapModal('${dateKey}', 'aoi', '${aoi.name}')" class="cursor-pointer flex items-center justify-between hover:bg-slate-200 px-1 py-0.5 rounded">
+                <span class="truncate font-medium">${aoi.avatar} ${aoi.name} <span class="text-[10px] text-slate-500">(AOI)</span></span>
+                ${aoi.isOverridden ? '<span class="text-[9px] text-amber-600">✏️</span>' : ''}
+              </div>
+              <div onclick="openSwapModal('${dateKey}', 'kla', '${kla.name}')" class="cursor-pointer flex items-center justify-between hover:bg-slate-200 px-1 py-0.5 rounded">
+                <span class="truncate font-medium">${kla.avatar} ${kla.name} <span class="text-[10px] text-slate-500">(KLA)</span></span>
+                ${kla.isOverridden ? '<span class="text-[9px] text-amber-600">✏️</span>' : ''}
+              </div>
+            </div>
+            <div onclick="openSwapModal('${dateKey}', 'weekday', '${weekday.name}')" 
+                 class="cursor-pointer p-1 rounded text-xs flex items-center justify-between border ${weekday.isOverridden ? 'bg-amber-50 border-amber-300 text-amber-900 font-medium' : 'bg-sky-50 border-sky-200 text-sky-800'} hover:opacity-85 shadow-2xs">
+              <span class="truncate font-medium">${weekday.avatar} ${weekday.name} <span class="text-[10px] opacity-75">(平日)</span></span>
+              ${weekday.isOverridden ? '<span class="text-[10px] text-amber-600">✏️</span>' : ''}
+            </div>
+          `;
+        }
+
+        bodyHtml += `</div>`;
+        cell.innerHTML = headerHtml + bodyHtml;
+        grid.appendChild(cell);
+      }
+    }
+
+    function autoScheduleCurrentMonth() {
+      renderCalendar();
+      alert(`✨ 已成功依照政府最新日曆與自訂輪替規則，完成 ${currentYear} 年 ${currentMonth} 月的排班！`);
+    }
+
+    function clearCurrentMonthOverrides() {
+      if (confirm(`確定要清除 ${currentYear} 年 ${currentMonth} 月的所有手動換班紀錄嗎？`)) {
+        const mm = String(currentMonth).padStart(2, '0');
+        const prefix = `${currentYear}-${mm}`;
+        Object.keys(overrides).forEach(k => {
+          if (k.startsWith(prefix)) delete overrides[k];
+        });
+        localStorage.setItem('duty_overrides', JSON.stringify(overrides));
+        syncToFirebase();
+        renderCalendar();
+      }
+    }
+
+    // ==========================================
+    // 5. 輪替規則管理 (四軌人工設定 + 修改者下拉選單)
+    // ==========================================
+    const RULE_LABELS = {
+      aoi: { title: 'AOI Daily Analysis', desc: '工作日週輪 (預設 Roger, Szuhua)' },
+      kla: { title: 'KLA Daily Analysis', desc: '工作日週輪 (預設 Henry, Tim, Wendy)' },
+      weekday: { title: '平日值班', desc: '工作日全員週輪' },
+      weekend: { title: '假日 / 國定假日值班', desc: '逢例假、補假與國定假依天數輪流' }
+    };
+
+    function renderRulesView() {
+      const container = document.getElementById('rules-cards-container');
+      container.innerHTML = '';
+
+      ['aoi', 'kla', 'weekday', 'weekend'].forEach(shiftType => {
+        const info = RULE_LABELS[shiftType];
+        const rules = ruleConfigs[shiftType] || [];
+        const latest = rules[rules.length - 1] || {};
+
+        const card = document.createElement('div');
+        card.className = 'border border-slate-200 rounded-xl p-4 bg-slate-50/50 flex flex-col justify-between space-y-3';
+        card.innerHTML = `
+          <div>
+            <div class="flex justify-between items-center mb-1">
+              <h3 class="font-bold text-sm text-slate-800">${info.title}</h3>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-indigo-100 text-indigo-700 font-semibold">${shiftType.toUpperCase()}</span>
+            </div>
+            <p class="text-xs text-slate-500 mb-3">${info.desc}</p>
+
+            <div class="bg-white p-3 rounded-lg border border-slate-200 text-xs space-y-1.5">
+              <div class="flex justify-between"><span class="text-slate-500">當前生效起始日：</span><span class="font-semibold text-slate-800">${latest.startDate || '—'}</span></div>
+              <div class="flex justify-between"><span class="text-slate-500">起始值班人：</span><span class="font-bold text-indigo-600">${latest.startPerson || '—'}</span></div>
+              <div>
+                <span class="text-slate-500 block mb-1">輪替順序：</span>
+                <div class="flex flex-wrap gap-1">
+                  ${(latest.sequence || []).map((name, idx) => `<span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-medium text-[11px]">${idx + 1}. ${name}</span>`).join('')}
+                </div>
+              </div>
+            </div>
+          </div>
+          <button onclick="openRuleModal('${shiftType}')" class="w-full py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition">
+            <i class="fa-solid fa-pen-to-square"></i>修改自訂起點與輪替順序
+          </button>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function openRuleModal(shiftType) {
+      currentEditingRuleType = shiftType;
+      const info = RULE_LABELS[shiftType];
+      document.getElementById('rule-modal-title').innerText = `修訂【${info.title}】輪替規則`;
+
+      const rules = ruleConfigs[shiftType] || [];
+      const latest = rules[rules.length - 1] || {};
+
+      document.getElementById('rule-start-date').value = formatDate(new Date());
+      document.getElementById('rule-sequence-input').value = (latest.sequence || []).join(', ');
+      document.getElementById('rule-reason').value = '';
+
+      // 下拉選單：起始人員
+      const sel = document.getElementById('rule-start-person');
+      sel.innerHTML = '';
+      members.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.name;
+        opt.innerText = `${m.avatar} ${m.name}`;
+        if (m.name === latest.startPerson) opt.selected = true;
+        sel.appendChild(opt);
+      });
+
+      // 下拉選單：修改者
+      const modSel = document.getElementById('rule-modifier');
+      modSel.innerHTML = '<option value="">-- 請選擇您的姓名 --</option>';
+      members.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.name;
+        opt.innerText = `${m.avatar} ${m.name}`;
+        modSel.appendChild(opt);
+      });
+
+      document.getElementById('rule-modal').classList.remove('hidden');
+    }
+
+    function closeRuleModal() {
+      document.getElementById('rule-modal').classList.add('hidden');
+    }
+
+    function saveRuleConfig() {
+      const shiftType = currentEditingRuleType;
+      const startDate = document.getElementById('rule-start-date').value;
+      const startPerson = document.getElementById('rule-start-person').value;
+      const rawSeq = document.getElementById('rule-sequence-input').value;
+      const modifier = document.getElementById('rule-modifier').value;
+      const reason = document.getElementById('rule-reason').value.trim();
+
+      if (!startDate) { alert('請選擇生效起始日期！'); return; }
+      if (!modifier) { alert('請在下拉選單選擇修改者姓名！'); return; }
+      if (!reason) { alert('請填寫修訂原因！'); return; }
+
+      const seq = rawSeq.split(/[,，\s]+/).filter(x => x.trim().length > 0);
+      if (seq.length === 0) { alert('請至少填寫一位同仁順序！'); return; }
+      if (!seq.includes(startPerson)) {
+        seq.unshift(startPerson);
+      }
+
+      const oldRule = (ruleConfigs[shiftType] && ruleConfigs[shiftType].length > 0)
+        ? ruleConfigs[shiftType][ruleConfigs[shiftType].length - 1]
+        : null;
+
+      const newRuleItem = {
+        startDate: startDate,
+        startPerson: startPerson,
+        sequence: seq
+      };
+
+      if (!ruleConfigs[shiftType]) ruleConfigs[shiftType] = [];
+      ruleConfigs[shiftType].push(newRuleItem);
+
+      // 紀錄 Audit Log
+      auditLogs.unshift({
+        timestamp: new Date().toLocaleString('zh-TW'),
+        modifier: modifier,
+        category: '輪替規則修訂',
+        shiftType: shiftType,
+        targetDesc: `${RULE_LABELS[shiftType].title} (自 ${startDate} 生效)`,
+        oldStatus: oldRule ? `起: ${oldRule.startPerson} [${oldRule.sequence.join('➔')}]` : '系統預設',
+        newStatus: `起: ${startPerson} [${seq.join('➔')}]`,
+        reason: reason
+      });
+
+      localStorage.setItem('duty_rule_configs', JSON.stringify(ruleConfigs));
+      localStorage.setItem('duty_audit_logs', JSON.stringify(auditLogs));
+
+      syncToFirebase();
+
+      closeRuleModal();
+      renderRulesView();
+      renderCalendar();
+      renderAuditLogs();
+      alert(`已成功更新【${RULE_LABELS[shiftType].title}】輪替規則！自 ${startDate} 起的所有排程已自動重新演算。`);
+    }
+
+    // ==========================================
+    // 6. 換班申請與 7 日防呆 (修改者改為下拉選單)
+    // ==========================================
+    function openSwapModal(dateKey, shiftType, currentName) {
+      currentSwapData = {
+        dates: [dateKey],
+        shiftType: shiftType,
+        currentName: currentName
+      };
+
+      const labels = { aoi: 'AOI 分析', kla: 'KLA 分析', weekday: '平日值班', weekend: '假日值班' };
+      document.getElementById('swap-shift-type').innerText = labels[shiftType] || shiftType;
+      document.getElementById('swap-current-assignee').innerText = currentName;
+      document.getElementById('range-start').value = dateKey;
+      document.getElementById('range-end').value = dateKey;
+      document.getElementById('swap-alarm-alert').classList.add('hidden');
+      document.getElementById('swap-reason').value = '';
+
+      // 下拉選單：新負責人
+      const select = document.getElementById('swap-new-assignee');
+      select.innerHTML = '';
+      members.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.name;
+        opt.innerText = `${m.avatar} ${m.name}`;
+        if (m.name !== currentName) select.appendChild(opt);
+      });
+
+      // 下拉選單：修改者
+      const modSelect = document.getElementById('swap-modifier');
+      modSelect.innerHTML = '<option value="">-- 請選擇您的姓名 --</option>';
+      members.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.name;
+        opt.innerText = `${m.avatar} ${m.name}`;
+        modSelect.appendChild(opt);
+      });
+
+      renderSwapDatesChips();
+      document.getElementById('swap-modal').classList.remove('hidden');
+    }
+
+    function addDateRangeToSwap() {
+      const startStr = document.getElementById('range-start').value;
+      const endStr = document.getElementById('range-end').value;
+      if (!startStr || !endStr) return;
+
+      let cur = new Date(startStr);
+      const end = new Date(endStr);
+      if (cur > end) { alert('起始日不可晚於結束日'); return; }
+
+      while (cur <= end) {
+        const key = formatDate(cur);
+        if (!currentSwapData.dates.includes(key)) currentSwapData.dates.push(key);
+        cur.setDate(cur.getDate() + 1);
+      }
+      currentSwapData.dates.sort();
+      renderSwapDatesChips();
+    }
+
+    function removeDateFromSwap(key) {
+      currentSwapData.dates = currentSwapData.dates.filter(d => d !== key);
+      renderSwapDatesChips();
+    }
+
+    function renderSwapDatesChips() {
+      const container = document.getElementById('swap-dates-chips');
+      container.innerHTML = '';
+      currentSwapData.dates.forEach(k => {
+        const chip = document.createElement('span');
+        chip.className = 'inline-flex items-center gap-1 px-2 py-0.5 rounded bg-white border border-slate-300 text-[11px] text-slate-700 font-medium';
+        chip.innerHTML = `${k} <button onclick="removeDateFromSwap('${k}')" class="text-slate-400 hover:text-rose-500 font-bold ml-1">×</button>`;
+        container.appendChild(chip);
+      });
+    }
+
+    function closeSwapModal() {
+      document.getElementById('swap-modal').classList.add('hidden');
+    }
+
+    function checkConsecutiveDutyLimit(personName, targetDates, shiftType) {
+      const simDates = new Set(targetDates);
+      for (let baseDateStr of targetDates) {
+        let base = new Date(baseDateStr);
+        let consecutive = 1;
+
+        let prev = new Date(base);
+        prev.setDate(prev.getDate() - 1);
+        while (true) {
+          const pKey = formatDate(prev);
+          const hasDuty = isPersonOnDuty(personName, prev, pKey, simDates, shiftType);
+          if (hasDuty) { consecutive++; prev.setDate(prev.getDate() - 1); } else break;
+        }
+
+        let next = new Date(base);
+        next.setDate(next.getDate() + 1);
+        while (true) {
+          const nKey = formatDate(next);
+          const hasDuty = isPersonOnDuty(personName, next, nKey, simDates, shiftType);
+          if (hasDuty) { consecutive++; next.setDate(next.getDate() + 1); } else break;
+        }
+
+        if (consecutive >= 7) return { blocked: true, consecutiveDays: consecutive, dateStr: baseDateStr };
+      }
+      return { blocked: false };
+    }
+
+    function isPersonOnDuty(name, dateObj, dateKey, simDates, simShiftType) {
+      if (simDates.has(dateKey)) return true;
+      const isOff = checkIsOffDay(dateObj);
+      if (isOff) {
+        const p = getScheduledPerson(dateObj, 'weekend');
+        return p && p.name === name;
+      } else {
+        const aoi = getScheduledPerson(dateObj, 'aoi');
+        const kla = getScheduledPerson(dateObj, 'kla');
+        const weekday = getScheduledPerson(dateObj, 'weekday');
+        return (aoi && aoi.name === name) || (kla && kla.name === name) || (weekday && weekday.name === name);
+      }
+    }
+
+    function confirmSwapShift() {
+      const newAssignee = document.getElementById('swap-new-assignee').value;
+      const modifier = document.getElementById('swap-modifier').value;
+      const reason = document.getElementById('swap-reason').value.trim();
+
+      if (!modifier) { alert('請在下拉選單選擇修改者姓名！'); return; }
+      if (!reason) { alert('請填寫具體換班原因！'); return; }
+      if (currentSwapData.dates.length === 0) { alert('請至少保留一個換班日期！'); return; }
+
+      const check = checkConsecutiveDutyLimit(newAssignee, currentSwapData.dates, currentSwapData.shiftType);
+      if (check.blocked) {
+        const alertBox = document.getElementById('swap-alarm-alert');
+        document.getElementById('swap-alarm-msg').innerText = `⚠️ 系統阻擋：${newAssignee} 在包含 ${check.dateStr} 的週期內將連續值勤達 ${check.consecutiveDays} 天，超過 7 天法定上限！請協調其他同仁。`;
+        alertBox.classList.remove('hidden');
+        return;
+      }
+
+      const nowStr = new Date().toLocaleString('zh-TW');
+      const labels = { aoi: 'AOI 分析', kla: 'KLA 分析', weekday: '平日值班', weekend: '假日值班' };
+
+      currentSwapData.dates.forEach(dKey => {
+        if (!overrides[dKey]) overrides[dKey] = {};
+        overrides[dKey][currentSwapData.shiftType] = newAssignee;
+
+        auditLogs.unshift({
+          timestamp: nowStr,
+          modifier: modifier,
+          category: '個人換班',
+          shiftType: currentSwapData.shiftType,
+          targetDesc: `${dKey} (${labels[currentSwapData.shiftType] || currentSwapData.shiftType})`,
+          oldStatus: currentSwapData.currentName,
+          newStatus: newAssignee,
+          reason: reason
+        });
+      });
+
+      localStorage.setItem('duty_overrides', JSON.stringify(overrides));
+      localStorage.setItem('duty_audit_logs', JSON.stringify(auditLogs));
+
+      syncToFirebase();
+
+      closeSwapModal();
+      renderCalendar();
+      renderAuditLogs();
+      alert('換班完成！已即時同步至雲端並記錄於 Audit Log。');
+    }
+
+    // ==========================================
+    // 7. 稽核紀錄 (Audit Log)
+    // ==========================================
+    function renderAuditLogs() {
+      const tbody = document.getElementById('log-table-body');
+      tbody.innerHTML = '';
+
+      auditLogs.forEach(l => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50';
+        tr.innerHTML = `
+          <td class="py-2 px-3 text-slate-500 whitespace-nowrap">${l.timestamp}</td>
+          <td class="py-2 px-3 font-semibold text-slate-800 whitespace-nowrap">${l.modifier}</td>
+          <td class="py-2 px-3 whitespace-nowrap">
+            <span class="px-2 py-0.5 rounded text-[11px] font-semibold ${l.category === '輪替規則修訂' ? 'bg-indigo-100 text-indigo-700 border border-indigo-200' : 'bg-slate-100 text-slate-700'}">${l.category || '個人換班'}</span>
+          </td>
+          <td class="py-2 px-3 font-medium text-slate-700 whitespace-nowrap">${l.targetDesc || l.date || '—'}</td>
+          <td class="py-2 px-3 text-slate-500 line-through">${l.oldStatus || l.oldPerson || '—'}</td>
+          <td class="py-2 px-3 text-indigo-600 font-bold">${l.newStatus || l.newPerson || '—'}</td>
+          <td class="py-2 px-3 text-slate-600">${l.reason}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function clearAuditLogs() {
+      if (confirm('確定要清空所有稽核異動紀錄嗎？')) {
+        auditLogs = [];
+        localStorage.setItem('duty_audit_logs', JSON.stringify(auditLogs));
+        syncToFirebase();
+        renderAuditLogs();
+      }
+    }
+
+    // ==========================================
+    // 8. 人員名單維護
+    // ==========================================
+    function renderMembers() {
+      const tbody = document.getElementById('member-table-body');
+      tbody.innerHTML = '';
+      members.forEach((m) => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50';
+        tr.innerHTML = `
+          <td class="py-2.5 px-3 text-lg">${m.avatar}</td>
+          <td class="py-2.5 px-3 font-bold text-slate-700">${m.name}</td>
+          <td class="py-2.5 px-3 text-center">${m.isAoi ? '✅' : '—'}</td>
+          <td class="py-2.5 px-3 text-center">${m.isKla ? '✅' : '—'}</td>
+          <td class="py-2.5 px-3 text-center">${m.isWeekday ? '✅' : '—'}</td>
+          <td class="py-2.5 px-3 text-center">${m.isWeekend ? '✅' : '—'}</td>
+          <td class="py-2.5 px-3 text-right space-x-1">
+            <button onclick="editMember('${m.id}')" class="text-indigo-600 hover:text-indigo-800 font-medium">編輯</button>
+            <button onclick="deleteMember('${m.id}')" class="text-rose-500 hover:text-rose-700 font-medium">刪除</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function openAddMemberModal() {
+      editingMemberId = null;
+      document.getElementById('member-name-input').value = '';
+      selectedAvatar = '🐶';
+      document.getElementById('m-chk-aoi').checked = false;
+      document.getElementById('m-chk-kla').checked = false;
+      document.getElementById('m-chk-weekday').checked = true;
+      document.getElementById('m-chk-weekend').checked = true;
+      renderAvatarPicker();
+      document.getElementById('member-modal').classList.remove('hidden');
+    }
+
+    function editMember(id) {
+      const m = members.find(x => x.id === id);
+      if (!m) return;
+      editingMemberId = id;
+      document.getElementById('member-name-input').value = m.name;
+      selectedAvatar = m.avatar || '🐶';
+      document.getElementById('m-chk-aoi').checked = !!m.isAoi;
+      document.getElementById('m-chk-kla').checked = !!m.isKla;
+      document.getElementById('m-chk-weekday').checked = !!m.isWeekday;
+      document.getElementById('m-chk-weekend').checked = !!m.isWeekend;
+      renderAvatarPicker();
+      document.getElementById('member-modal').classList.remove('hidden');
+    }
+
+    function renderAvatarPicker() {
+      const grid = document.getElementById('avatar-picker-grid');
+      grid.innerHTML = '';
+      ANIMAL_AVATARS.forEach(emoji => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `p-2 text-xl rounded-lg border text-center transition ${selectedAvatar === emoji ? 'bg-indigo-100 border-indigo-500 scale-105' : 'hover:bg-slate-100 border-slate-200'}`;
+        btn.innerText = emoji;
+        btn.onclick = () => { selectedAvatar = emoji; renderAvatarPicker(); };
+        grid.appendChild(btn);
+      });
+    }
+
+    function saveMember() {
+      const name = document.getElementById('member-name-input').value.trim();
+      if (!name) { alert('請填寫姓名'); return; }
+
+      if (editingMemberId) {
+        const m = members.find(x => x.id === editingMemberId);
+        m.name = name;
+        m.avatar = selectedAvatar;
+        m.isAoi = document.getElementById('m-chk-aoi').checked;
+        m.isKla = document.getElementById('m-chk-kla').checked;
+        m.isWeekday = document.getElementById('m-chk-weekday').checked;
+        m.isWeekend = document.getElementById('m-chk-weekend').checked;
+      } else {
+        members.push({
+          id: Date.now().toString(),
+          name: name,
+          avatar: selectedAvatar,
+          isAoi: document.getElementById('m-chk-aoi').checked,
+          isKla: document.getElementById('m-chk-kla').checked,
+          isWeekday: document.getElementById('m-chk-weekday').checked,
+          isWeekend: document.getElementById('m-chk-weekend').checked
+        });
+      }
+      localStorage.setItem('duty_members', JSON.stringify(members));
+      syncToFirebase();
+      closeMemberModal();
+      renderMembers();
+      renderCalendar();
+    }
+
+    function deleteMember(id) {
+      if (confirm('確定要刪除此成員嗎？')) {
+        members = members.filter(m => m.id !== id);
+        localStorage.setItem('duty_members', JSON.stringify(members));
+        syncToFirebase();
+        renderMembers();
+        renderCalendar();
+      }
+    }
+
+    function closeMemberModal() {
+      document.getElementById('member-modal').classList.add('hidden');
+    }
+
+    // ==========================================
+    // 9. 分頁切換、年月切換與備份匯入匯出
+    // ==========================================
+    function switchTab(tab) {
+      document.getElementById('view-calendar').classList.toggle('hidden', tab !== 'calendar');
+      document.getElementById('view-rules').classList.toggle('hidden', tab !== 'rules');
+      document.getElementById('view-members').classList.toggle('hidden', tab !== 'members');
+      document.getElementById('view-logs').classList.toggle('hidden', tab !== 'logs');
+
+      ['calendar', 'rules', 'members', 'logs'].forEach(t => {
+        const btn = document.getElementById(`tab-${t}`);
+        if (btn) {
+          btn.className = (t === tab)
+            ? 'px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-medium transition'
+            : 'px-3 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition';
+        }
+      });
+
+      if (tab === 'calendar') renderCalendar();
+      if (tab === 'rules') renderRulesView();
+      if (tab === 'members') renderMembers();
+      if (tab === 'logs') renderAuditLogs();
+    }
+
+    function changeMonth(delta) {
+      currentMonth += delta;
+      if (currentMonth > 12) { currentMonth = 1; currentYear++; }
+      else if (currentMonth < 1) { currentMonth = 12; currentYear--; }
+      renderCalendar();
+    }
+
+    function jumpToMonth(y, m) {
+      currentYear = y;
+      currentMonth = m + 1;
+      renderCalendar();
+    }
+
+    function jumpToCurrentMonth() {
+      const now = new Date();
+      currentYear = now.getFullYear();
+      currentMonth = now.getMonth() + 1;
+      renderCalendar();
+    }
+
+    function exportData() {
+      const data = { members, overrides, auditLogs, ruleConfigs, exportTime: new Date().toISOString() };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `duty_roster_backup_${formatDate(new Date())}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importData(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const imported = JSON.parse(event.target.result);
+          if (imported.members) members = imported.members;
+          if (imported.overrides) overrides = imported.overrides;
+          if (imported.auditLogs) auditLogs = imported.auditLogs;
+          if (imported.ruleConfigs) ruleConfigs = imported.ruleConfigs;
+
+          localStorage.setItem('duty_members', JSON.stringify(members));
+          localStorage.setItem('duty_overrides', JSON.stringify(overrides));
+          localStorage.setItem('duty_audit_logs', JSON.stringify(auditLogs));
+          localStorage.setItem('duty_rule_configs', JSON.stringify(ruleConfigs));
+
+          syncToFirebase();
+          renderCalendar();
+          renderRulesView();
+          renderMembers();
+          renderAuditLogs();
+          alert('備份資料已成功匯入並同步至雲端！');
+        } catch (err) {
+          alert('匯入失敗：檔案格式不正確！');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // 系統開箱啟動
+    window.onload = () => {
+      initFirebase();
+      renderCalendar();
+      renderRulesView();
+      renderMembers();
+      renderAuditLogs();
+    };
+  </script>
+</body>
+</html>
