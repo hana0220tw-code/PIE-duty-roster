@@ -47,8 +47,11 @@
         <button onclick="switchTab('calendar')" id="tab-calendar" class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-medium transition">
           <i class="fa-solid fa-calendar-days mr-1"></i>班表月曆
         </button>
+        <button onclick="switchTab('rules')" id="tab-rules" class="px-3 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition">
+          <i class="fa-solid fa-sliders mr-1"></i>輪替規則設定
+        </button>
         <button onclick="switchTab('members')" id="tab-members" class="px-3 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition">
-          <i class="fa-solid fa-users mr-1"></i>人員與分工
+          <i class="fa-solid fa-users mr-1"></i>人員名單
         </button>
         <button onclick="switchTab('logs')" id="tab-logs" class="px-3 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition">
           <i class="fa-solid fa-clock-rotate-left mr-1"></i>異動紀錄 (Audit Log)
@@ -64,12 +67,15 @@
             <i class="fa-solid fa-chevron-left"></i>
           </button>
           <span id="current-month-display" class="px-3 py-1 font-bold text-slate-700 text-sm flex items-center min-w-[120px] justify-center">
-            2027 年 4 月
+            -- 年 -- 月
           </span>
           <button onclick="changeMonth(1)" class="px-2.5 py-1 text-slate-600 hover:bg-slate-50 rounded-r-lg text-xs font-semibold">
             <i class="fa-solid fa-chevron-right"></i>
           </button>
         </div>
+        <button onclick="jumpToCurrentMonth()" class="px-2.5 py-1 text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-md border border-indigo-200 font-semibold transition">
+          回到本月 (Today)
+        </button>
         <button onclick="jumpToMonth(2026, 10)" class="px-2.5 py-1 text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-md border border-slate-200 font-medium transition">
           基準月 (2026/11)
         </button>
@@ -129,13 +135,29 @@
       </div>
     </div>
 
-    <!-- 視圖 2: 人員與分工 -->
+    <!-- 視圖 2: 輪替規則設定 (四軌人工自訂起點與順序) -->
+    <div id="view-rules" class="hidden space-y-4">
+      <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+        <div class="flex justify-between items-center mb-4">
+          <div>
+            <h2 class="text-base font-bold text-slate-800">四種值班輪替規則設定</h2>
+            <p class="text-xs text-slate-500 mt-0.5">可自訂生效起始日、起始人員與輪替順序。生效日後將自動採用新輪替順序運算！</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="rules-cards-container">
+          <!-- 規則卡片由 JS 動態生成 -->
+        </div>
+      </div>
+    </div>
+
+    <!-- 視圖 3: 人員名單 -->
     <div id="view-members" class="hidden space-y-4">
       <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
         <div class="flex justify-between items-center mb-4">
           <div>
-            <h2 class="text-base font-bold text-slate-800">部門同仁與分工規則管理</h2>
-            <p class="text-xs text-slate-500 mt-0.5">可在此增減成員、切換可愛動物圖案，或勾選負責業務</p>
+            <h2 class="text-base font-bold text-slate-800">部門同仁與代表圖案管理</h2>
+            <p class="text-xs text-slate-500 mt-0.5">可在此增減成員、切換 20 種可愛動物頭像</p>
           </div>
           <button onclick="openAddMemberModal()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold flex items-center space-x-1 shadow-sm transition">
             <i class="fa-solid fa-user-plus mr-1"></i>新增成員
@@ -160,13 +182,13 @@
       </div>
     </div>
 
-    <!-- 視圖 3: 異動紀錄 (Audit Log) -->
+    <!-- 視圖 4: 異動紀錄 (Audit Log) -->
     <div id="view-logs" class="hidden space-y-4">
       <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
         <div class="flex justify-between items-center mb-4">
           <div>
-            <h2 class="text-base font-bold text-slate-800">換班審計歷程 (Audit Log)</h2>
-            <p class="text-xs text-slate-500 mt-0.5">所有換班紀錄均強制登記修改人與時間，確保透明防竄改</p>
+            <h2 class="text-base font-bold text-slate-800">換班與規則修訂稽核歷程 (Audit Log)</h2>
+            <p class="text-xs text-slate-500 mt-0.5">所有換班與規則調整均強制登記修改者姓名、時間與原因，透明防竄改</p>
           </div>
           <button onclick="clearAuditLogs()" class="text-xs text-rose-600 hover:underline">清空歷史紀錄</button>
         </div>
@@ -176,11 +198,11 @@
               <tr>
                 <th class="py-2.5 px-3">時間戳記</th>
                 <th class="py-2.5 px-3">修改者</th>
-                <th class="py-2.5 px-3">異動日期</th>
-                <th class="py-2.5 px-3">班別項目</th>
-                <th class="py-2.5 px-3">原負責人</th>
-                <th class="py-2.5 px-3">更換為</th>
-                <th class="py-2.5 px-3">換班原因</th>
+                <th class="py-2.5 px-3">類別</th>
+                <th class="py-2.5 px-3">項目 / 生效日</th>
+                <th class="py-2.5 px-3">原狀態</th>
+                <th class="py-2.5 px-3">修訂為</th>
+                <th class="py-2.5 px-3">修訂原因</th>
               </tr>
             </thead>
             <tbody id="log-table-body" class="divide-y divide-slate-100"></tbody>
@@ -191,7 +213,7 @@
   </main>
 
   <!-- ========================================== -->
-  <!-- 換班彈跳視窗 (支援連續區間與7日防呆) -->
+  <!-- 彈出視窗 1: 換班視窗 (連續區間與7日防呆) -->
   <!-- ========================================== -->
   <div id="swap-modal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-100">
@@ -267,7 +289,55 @@
     </div>
   </div>
 
-  <!-- 人員編輯視窗 -->
+  <!-- ========================================== -->
+  <!-- 彈出視窗 2: 輪替規則設定視窗 -->
+  <!-- ========================================== -->
+  <div id="rule-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-100 text-xs">
+      <div class="px-5 py-3.5 bg-slate-900 text-white flex justify-between items-center">
+        <h3 class="font-bold text-sm" id="rule-modal-title">設定輪替規則</h3>
+        <button onclick="closeRuleModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="p-5 space-y-3.5">
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">生效起始日期 (從此日開始套用新輪替) *</label>
+          <input type="date" id="rule-start-date" class="w-full border border-slate-300 rounded-lg p-2 bg-white text-xs">
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">起始日當週/當日負責人 *</label>
+          <select id="rule-start-person" class="w-full border border-slate-300 rounded-lg p-2 bg-white text-xs"></select>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">後續輪替順序 (以逗號或空格分隔同仁姓名) *</label>
+          <input type="text" id="rule-sequence-input" placeholder="例如：Henry, Wendy, Tim" class="w-full border border-slate-300 rounded-lg p-2 text-xs">
+          <p class="text-[11px] text-slate-500 mt-1">系統將從起始人開始，依照上方清單循環輪替。</p>
+        </div>
+
+        <div class="border-t border-slate-100 pt-3 space-y-2">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">修改者姓名 / 工號 (Audit Log 紀錄) *</label>
+            <input type="text" id="rule-modifier" placeholder="請輸入姓名以供稽核存查" class="w-full border border-slate-300 rounded-lg p-2 text-xs">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">修訂原因 *</label>
+            <input type="text" id="rule-reason" placeholder="例如：新成員加入、部門輪班軌道重組" class="w-full border border-slate-300 rounded-lg p-2 text-xs">
+          </div>
+        </div>
+      </div>
+
+      <div class="px-5 py-3 bg-slate-50 border-t border-slate-200 flex justify-end space-x-2">
+        <button onclick="closeRuleModal()" class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-600 hover:bg-white text-xs font-medium">取消</button>
+        <button onclick="saveRuleConfig()" class="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-sm transition">儲存並立即套用</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- 彈出視窗 3: 人員編輯視窗 -->
+  <!-- ========================================== -->
   <div id="member-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-5 space-y-4 border border-slate-100 text-xs">
       <div class="flex justify-between items-center border-b pb-2">
@@ -297,20 +367,21 @@
   </div>
 
   <!-- ========================================== -->
-  <!-- JavaScript 核心排班與 Firebase 雙向同步邏輯 -->
+  <!-- JavaScript 核心引擎與 Firebase 雙向同步 -->
   <!-- ========================================== -->
   <script>
-    // ========================================================
-    // ⚠️ Firebase 設定：請將您在 Firebase 申請的金鑰貼在此處
-    // ========================================================
+    // ==========================================
+    // 1. Firebase 專案金鑰 (已為您預先填入)
+    // ==========================================
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-      databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_PROJECT_ID.appspot.com",
-      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-      appId: "YOUR_APP_ID"
+      apiKey: "AIzaSyAzZsltuRMKX45zgts_rv4sPlZho4N_ps4",
+      authDomain: "pie1-4-duty-roster.firebaseapp.com",
+      databaseURL: "https://pie1-4-duty-roster-default-rtdb.firebaseio.com",
+      projectId: "pie1-4-duty-roster",
+      storageBucket: "pie1-4-duty-roster.firebasestorage.app",
+      messagingSenderId: "67862212398",
+      appId: "1:67862212398:web:8d4deb9384c144e5d454bf",
+      measurementId: "G-GP2ZPC8P9F"
     };
 
     let db = null;
@@ -319,9 +390,8 @@
     // 20 款可愛動物
     const ANIMAL_AVATARS = ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🐔', '🐧', '🦆', '🦉', '🦄'];
 
-    // 國定假日與補假資料庫（包含 2027/04/30 勞動節逢週六提前補假）
+    // 行政院人事行政總處最新官方行事曆 (含 4/30 勞動節補假)
     const OFFICIAL_CALENDAR = {
-      // 2026 年
       '2026-01-01': '元旦',
       '2026-02-16': '除夕',
       '2026-02-17': '春節初一',
@@ -337,8 +407,6 @@
       '2026-10-09': '國慶日補假',
       '2026-10-25': '臺灣光復節',
       '2026-12-25': '行憲紀念日',
-
-      // 2027 年 (行政院人事行政總處 116 年核定放假與補假)
       '2027-01-01': '元旦',
       '2027-02-04': '小年夜',
       '2027-02-05': '除夕',
@@ -352,7 +420,7 @@
       '2027-04-04': '兒童節',
       '2027-04-05': '清明節',
       '2027-04-06': '兒童節補假',
-      '2027-04-30': '勞動節補假', // 5/1逢週六，4/30週五放假
+      '2027-04-30': '勞動節補假',
       '2027-05-01': '勞動節',
       '2027-06-09': '端午節',
       '2027-09-15': '中秋節',
@@ -373,26 +441,39 @@
       { id: '5', name: 'Tim', avatar: '🐼', isAoi: false, isKla: true, isWeekday: true, isWeekend: true }
     ];
 
-    const ANCHOR_DATE = new Date(2026, 10, 9);
-    const ANCHOR_WEEKEND_DATE = new Date(2026, 10, 14);
+    // 四種值班預設輪替規則（支援多階段自訂）
+    const DEFAULT_RULE_CONFIGS = {
+      aoi: [
+        { startDate: '2026-11-09', startPerson: 'Roger', sequence: ['Roger', 'Szuhua'] }
+      ],
+      kla: [
+        { startDate: '2026-11-09', startPerson: 'Henry', sequence: ['Henry', 'Tim', 'Wendy'] }
+      ],
+      weekday: [
+        { startDate: '2026-11-09', startPerson: 'Tim', sequence: ['Tim', 'Roger', 'Wendy', 'Szuhua', 'Henry'] }
+      ],
+      weekend: [
+        { startDate: '2026-11-14', startPerson: 'Tim', sequence: ['Tim', 'Henry', 'Roger', 'Szuhua', 'Wendy'] }
+      ]
+    };
 
-    const SEQ_AOI_NAMES = ['Roger', 'Szuhua'];
-    const SEQ_KLA_NAMES = ['Henry', 'Tim', 'Wendy'];
-    const SEQ_WEEKDAY_NAMES = ['Tim', 'Roger', 'Wendy', 'Szuhua', 'Henry'];
-    const SEQ_WEEKEND_NAMES = ['Tim', 'Henry', 'Roger', 'Szuhua', 'Wendy'];
+    // 狀態變數 (開箱自動抓取「當前真實年月」，例如 2026 年 11 月)
+    const todayObj = new Date();
+    let currentYear = todayObj.getFullYear();
+    let currentMonth = todayObj.getMonth() + 1;
 
-    let currentYear = 2027;
-    let currentMonth = 4;
     let members = JSON.parse(localStorage.getItem('duty_members')) || DEFAULT_MEMBERS;
     let overrides = JSON.parse(localStorage.getItem('duty_overrides')) || {};
     let auditLogs = JSON.parse(localStorage.getItem('duty_audit_logs')) || [];
+    let ruleConfigs = JSON.parse(localStorage.getItem('duty_rule_configs')) || DEFAULT_RULE_CONFIGS;
 
     let currentSwapData = null;
     let editingMemberId = null;
     let selectedAvatar = '🐶';
+    let currentEditingRuleType = null;
 
     // ==========================================
-    // Firebase 初始化與即時監聽核心
+    // 2. Firebase 即時連動
     // ==========================================
     function initFirebase() {
       const statusEl = document.getElementById('syncStatus');
@@ -405,29 +486,30 @@
           statusEl.className = "ml-2 text-[11px] px-2 py-0.5 rounded bg-emerald-900/60 text-emerald-200 border border-emerald-700/60 flex items-center gap-1";
           statusEl.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span><span>Firebase 雲端即時連動中</span>`;
 
-          // 監聽雲端資料異動 (當任何同事換班或新增人員，此處自動觸發畫面更新)
           db.ref('dutyRoster').on('value', (snapshot) => {
             const data = snapshot.val();
             if (data) {
               if (data.members) members = data.members;
               if (data.overrides) overrides = data.overrides;
               if (data.auditLogs) auditLogs = data.auditLogs;
+              if (data.ruleConfigs) ruleConfigs = data.ruleConfigs;
 
               localStorage.setItem('duty_members', JSON.stringify(members));
               localStorage.setItem('duty_overrides', JSON.stringify(overrides));
               localStorage.setItem('duty_audit_logs', JSON.stringify(auditLogs));
+              localStorage.setItem('duty_rule_configs', JSON.stringify(ruleConfigs));
 
               renderCalendar();
+              renderRulesView();
               renderMembers();
               renderAuditLogs();
             } else {
-              // 第一次初始化上傳本地預設資料
               syncToFirebase();
             }
           });
         } catch (err) {
           console.error("Firebase 連線失敗:", err);
-          fallbackToLocalStorage("連線異常，已退回本地模式");
+          fallbackToLocalStorage("連線異常，退回本地暫存");
         }
       } else {
         fallbackToLocalStorage("未設定 Firebase 金鑰 (使用 LocalStorage)");
@@ -440,19 +522,21 @@
       statusEl.innerHTML = `<span>💻 ${msg}</span>`;
     }
 
-    // 將異動同步至 Firebase 雲端資料庫
     function syncToFirebase() {
       if (isFirebaseConnected && db) {
         db.ref('dutyRoster').set({
           members: members,
           overrides: overrides,
           auditLogs: auditLogs,
+          ruleConfigs: ruleConfigs,
           lastUpdated: new Date().toISOString()
         });
       }
     }
 
-    // 輔助數學函數
+    // ==========================================
+    // 3. 多階段排班演算法 (支援自訂起點與順序)
+    // ==========================================
     function mod(n, m) { return ((n % m) + m) % m; }
 
     function formatDate(d) {
@@ -462,6 +546,11 @@
       return `${y}-${m}-${day}`;
     }
 
+    function parseDate(str) {
+      const parts = str.split('-');
+      return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+    }
+
     function checkIsOffDay(d) {
       const day = d.getDay();
       if (day === 0 || day === 6) return true;
@@ -469,18 +558,32 @@
       return !!OFFICIAL_CALENDAR[key];
     }
 
-    function getWeekDiff(targetDate) {
-      const anchor = new Date(ANCHOR_DATE.getFullYear(), ANCHOR_DATE.getMonth(), ANCHOR_DATE.getDate());
+    function getActiveRule(shiftType, targetDateStr) {
+      const rules = ruleConfigs[shiftType] || [];
+      const sorted = [...rules].sort((a, b) => a.startDate.localeCompare(b.startDate));
+      let chosen = sorted[0];
+      for (let r of sorted) {
+        if (targetDateStr >= r.startDate) chosen = r;
+      }
+      return chosen;
+    }
+
+    function getWeekDiffFromAnchor(anchorStr, targetDate) {
+      const anchor = parseDate(anchorStr);
       const target = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
       const dayOffset = (target.getDay() + 6) % 7;
       target.setDate(target.getDate() - dayOffset);
+
+      const anchorOffset = (anchor.getDay() + 6) % 7;
+      anchor.setDate(anchor.getDate() - anchorOffset);
+
       return Math.round((target - anchor) / (7 * 24 * 60 * 60 * 1000));
     }
 
-    function getHolidayCountDiff(targetDate) {
+    function getHolidayCountDiffFromAnchor(anchorStr, targetDate) {
       let count = 0;
       const t = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
-      const a = new Date(ANCHOR_WEEKEND_DATE.getFullYear(), ANCHOR_WEEKEND_DATE.getMonth(), ANCHOR_WEEKEND_DATE.getDate());
+      const a = parseDate(anchorStr);
 
       if (t >= a) {
         let cursor = new Date(a);
@@ -506,27 +609,30 @@
       }
 
       const isOffDay = checkIsOffDay(date);
+      const rule = getActiveRule(shiftType, dateKey);
+      if (!rule || !rule.sequence || rule.sequence.length === 0) return null;
+
+      const seq = rule.sequence;
+      let startIndex = seq.indexOf(rule.startPerson);
+      if (startIndex === -1) startIndex = 0;
 
       if (shiftType === 'weekend') {
         if (!isOffDay) return null;
-        const diff = getHolidayCountDiff(date);
-        const name = SEQ_WEEKEND_NAMES[mod(diff, SEQ_WEEKEND_NAMES.length)];
+        const diff = getHolidayCountDiffFromAnchor(rule.startDate, date);
+        const name = seq[mod(startIndex + diff, seq.length)];
         const p = members.find(m => m.name === name);
         return { name: name, avatar: p ? p.avatar : '👤', isOverridden: false };
       } else {
         if (isOffDay) return null;
-        const wDiff = getWeekDiff(date);
-        let name = '';
-        if (shiftType === 'aoi') name = SEQ_AOI_NAMES[mod(wDiff, SEQ_AOI_NAMES.length)];
-        if (shiftType === 'kla') name = SEQ_KLA_NAMES[mod(wDiff, SEQ_KLA_NAMES.length)];
-        if (shiftType === 'weekday') name = SEQ_WEEKDAY_NAMES[mod(wDiff, SEQ_WEEKDAY_NAMES.length)];
+        const wDiff = getWeekDiffFromAnchor(rule.startDate, date);
+        const name = seq[mod(startIndex + wDiff, seq.length)];
         const p = members.find(m => m.name === name);
         return { name: name, avatar: p ? p.avatar : '👤', isOverridden: false };
       }
     }
 
     // ==========================================
-    // 渲染班表月曆 (Render Calendar)
+    // 4. 畫面渲染
     // ==========================================
     function renderCalendar() {
       document.getElementById('current-month-display').innerText = `${currentYear} 年 ${currentMonth} 月`;
@@ -606,7 +712,7 @@
 
     function autoScheduleCurrentMonth() {
       renderCalendar();
-      alert(`✨ 已成功依照 2027 最新政府行政機關日曆（含 4/30 勞動節補假）及部門三軌規則，完成 ${currentYear} 年 ${currentMonth} 月的排班！`);
+      alert(`✨ 已成功依照政府最新日曆與自訂輪替規則，完成 ${currentYear} 年 ${currentMonth} 月的排班！`);
     }
 
     function clearCurrentMonthOverrides() {
@@ -623,7 +729,140 @@
     }
 
     // ==========================================
-    // 換班對話框與 7 天連續值勤防呆檢測
+    // 5. 輪替規則管理 (四軌人工設定)
+    // ==========================================
+    const RULE_LABELS = {
+      aoi: { title: 'AOI Daily Analysis', desc: '工作日週輪 (預設 Roger, Szuhua)' },
+      kla: { title: 'KLA Daily Analysis', desc: '工作日週輪 (預設 Henry, Tim, Wendy)' },
+      weekday: { title: '平日值班', desc: '工作日全員週輪' },
+      weekend: { title: '假日 / 國定假日值班', desc: '逢例假、補假與國定假依天數輪流' }
+    };
+
+    function renderRulesView() {
+      const container = document.getElementById('rules-cards-container');
+      container.innerHTML = '';
+
+      ['aoi', 'kla', 'weekday', 'weekend'].forEach(shiftType => {
+        const info = RULE_LABELS[shiftType];
+        const rules = ruleConfigs[shiftType] || [];
+        const latest = rules[rules.length - 1] || {};
+
+        const card = document.createElement('div');
+        card.className = 'border border-slate-200 rounded-xl p-4 bg-slate-50/50 flex flex-col justify-between space-y-3';
+        card.innerHTML = `
+          <div>
+            <div class="flex justify-between items-center mb-1">
+              <h3 class="font-bold text-sm text-slate-800">${info.title}</h3>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-indigo-100 text-indigo-700 font-semibold">${shiftType.toUpperCase()}</span>
+            </div>
+            <p class="text-xs text-slate-500 mb-3">${info.desc}</p>
+
+            <div class="bg-white p-3 rounded-lg border border-slate-200 text-xs space-y-1.5">
+              <div class="flex justify-between"><span class="text-slate-500">當前生效起始日：</span><span class="font-semibold text-slate-800">${latest.startDate || '—'}</span></div>
+              <div class="flex justify-between"><span class="text-slate-500">起始值班人：</span><span class="font-bold text-indigo-600">${latest.startPerson || '—'}</span></div>
+              <div>
+                <span class="text-slate-500 block mb-1">輪替順序：</span>
+                <div class="flex flex-wrap gap-1">
+                  ${(latest.sequence || []).map((name, idx) => `<span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-medium text-[11px]">${idx + 1}. ${name}</span>`).join('')}
+                </div>
+              </div>
+            </div>
+          </div>
+          <button onclick="openRuleModal('${shiftType}')" class="w-full py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition">
+            <i class="fa-solid fa-pen-to-square"></i>修改自訂起點與輪替順序
+          </button>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function openRuleModal(shiftType) {
+      currentEditingRuleType = shiftType;
+      const info = RULE_LABELS[shiftType];
+      document.getElementById('rule-modal-title').innerText = `修訂【${info.title}】輪替規則`;
+
+      const rules = ruleConfigs[shiftType] || [];
+      const latest = rules[rules.length - 1] || {};
+
+      document.getElementById('rule-start-date').value = formatDate(new Date());
+      document.getElementById('rule-sequence-input').value = (latest.sequence || []).join(', ');
+      document.getElementById('rule-modifier').value = '';
+      document.getElementById('rule-reason').value = '';
+
+      const sel = document.getElementById('rule-start-person');
+      sel.innerHTML = '';
+      members.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.name;
+        opt.innerText = `${m.avatar} ${m.name}`;
+        if (m.name === latest.startPerson) opt.selected = true;
+        sel.appendChild(opt);
+      });
+
+      document.getElementById('rule-modal').classList.remove('hidden');
+    }
+
+    function closeRuleModal() {
+      document.getElementById('rule-modal').classList.add('hidden');
+    }
+
+    function saveRuleConfig() {
+      const shiftType = currentEditingRuleType;
+      const startDate = document.getElementById('rule-start-date').value;
+      const startPerson = document.getElementById('rule-start-person').value;
+      const rawSeq = document.getElementById('rule-sequence-input').value;
+      const modifier = document.getElementById('rule-modifier').value.trim();
+      const reason = document.getElementById('rule-reason').value.trim();
+
+      if (!startDate) { alert('請選擇生效起始日期！'); return; }
+      if (!modifier) { alert('請填寫修改者姓名以供稽核！'); return; }
+      if (!reason) { alert('請填寫修訂原因！'); return; }
+
+      const seq = rawSeq.split(/[,，\s]+/).filter(x => x.trim().length > 0);
+      if (seq.length === 0) { alert('請至少填寫一位同仁順序！'); return; }
+      if (!seq.includes(startPerson)) {
+        seq.unshift(startPerson);
+      }
+
+      const oldRule = (ruleConfigs[shiftType] && ruleConfigs[shiftType].length > 0)
+        ? ruleConfigs[shiftType][ruleConfigs[shiftType].length - 1]
+        : null;
+
+      const newRuleItem = {
+        startDate: startDate,
+        startPerson: startPerson,
+        sequence: seq
+      };
+
+      if (!ruleConfigs[shiftType]) ruleConfigs[shiftType] = [];
+      ruleConfigs[shiftType].push(newRuleItem);
+
+      // 紀錄 Audit Log
+      auditLogs.unshift({
+        timestamp: new Date().toLocaleString('zh-TW'),
+        modifier: modifier,
+        category: '輪替規則修訂',
+        shiftType: shiftType,
+        targetDesc: `${RULE_LABELS[shiftType].title} (自 ${startDate} 生效)`,
+        oldStatus: oldRule ? `起: ${oldRule.startPerson} [${oldRule.sequence.join('➔')}]` : '系統預設',
+        newStatus: `起: ${startPerson} [${seq.join('➔')}]`,
+        reason: reason
+      });
+
+      localStorage.setItem('duty_rule_configs', JSON.stringify(ruleConfigs));
+      localStorage.setItem('duty_audit_logs', JSON.stringify(auditLogs));
+
+      syncToFirebase();
+
+      closeRuleModal();
+      renderRulesView();
+      renderCalendar();
+      renderAuditLogs();
+      alert(`已成功更新【${RULE_LABELS[shiftType].title}】輪替規則！自 ${startDate} 起的所有排程已自動重新演算。`);
+    }
+
+    // ==========================================
+    // 6. 換班申請與 7 日防呆
     // ==========================================
     function openSwapModal(dateKey, shiftType, currentName) {
       currentSwapData = {
@@ -749,6 +988,7 @@
       }
 
       const nowStr = new Date().toLocaleString('zh-TW');
+      const labels = { aoi: 'AOI 分析', kla: 'KLA 分析', weekday: '平日值班', weekend: '假日值班' };
 
       currentSwapData.dates.forEach(dKey => {
         if (!overrides[dKey]) overrides[dKey] = {};
@@ -757,10 +997,11 @@
         auditLogs.unshift({
           timestamp: nowStr,
           modifier: modifier,
-          date: dKey,
+          category: '個人換班',
           shiftType: currentSwapData.shiftType,
-          oldPerson: currentSwapData.currentName,
-          newPerson: newAssignee,
+          targetDesc: `${dKey} (${labels[currentSwapData.shiftType] || currentSwapData.shiftType})`,
+          oldStatus: currentSwapData.currentName,
+          newStatus: newAssignee,
           reason: reason
         });
       });
@@ -768,7 +1009,6 @@
       localStorage.setItem('duty_overrides', JSON.stringify(overrides));
       localStorage.setItem('duty_audit_logs', JSON.stringify(auditLogs));
 
-      // 即時同步至 Firebase 雲端資料庫
       syncToFirebase();
 
       closeSwapModal();
@@ -778,12 +1018,11 @@
     }
 
     // ==========================================
-    // 人員與審計清單管理
+    // 7. 稽核紀錄 (Audit Log)
     // ==========================================
     function renderAuditLogs() {
       const tbody = document.getElementById('log-table-body');
       tbody.innerHTML = '';
-      const labels = { aoi: 'AOI 分析', kla: 'KLA 分析', weekday: '平日值班', weekend: '假日值班' };
 
       auditLogs.forEach(l => {
         const tr = document.createElement('tr');
@@ -791,10 +1030,12 @@
         tr.innerHTML = `
           <td class="py-2 px-3 text-slate-500 whitespace-nowrap">${l.timestamp}</td>
           <td class="py-2 px-3 font-semibold text-slate-800 whitespace-nowrap">${l.modifier}</td>
-          <td class="py-2 px-3 font-medium text-slate-700 whitespace-nowrap">${l.date}</td>
-          <td class="py-2 px-3 whitespace-nowrap"><span class="px-2 py-0.5 rounded bg-slate-100 font-medium">${labels[l.shiftType] || l.shiftType}</span></td>
-          <td class="py-2 px-3 text-slate-500 line-through">${l.oldPerson}</td>
-          <td class="py-2 px-3 text-indigo-600 font-bold">${l.newPerson}</td>
+          <td class="py-2 px-3 whitespace-nowrap">
+            <span class="px-2 py-0.5 rounded text-[11px] font-semibold ${l.category === '輪替規則修訂' ? 'bg-indigo-100 text-indigo-700 border border-indigo-200' : 'bg-slate-100 text-slate-700'}">${l.category || '個人換班'}</span>
+          </td>
+          <td class="py-2 px-3 font-medium text-slate-700 whitespace-nowrap">${l.targetDesc || l.date || '—'}</td>
+          <td class="py-2 px-3 text-slate-500 line-through">${l.oldStatus || l.oldPerson || '—'}</td>
+          <td class="py-2 px-3 text-indigo-600 font-bold">${l.newStatus || l.newPerson || '—'}</td>
           <td class="py-2 px-3 text-slate-600">${l.reason}</td>
         `;
         tbody.appendChild(tr);
@@ -810,6 +1051,9 @@
       }
     }
 
+    // ==========================================
+    // 8. 人員名單維護
+    // ==========================================
     function renderMembers() {
       const tbody = document.getElementById('member-table-body');
       tbody.innerHTML = '';
@@ -916,18 +1160,25 @@
     }
 
     // ==========================================
-    // 介面切換與匯入匯出
+    // 9. 分頁切換、年月切換與備份匯入匯出
     // ==========================================
     function switchTab(tab) {
       document.getElementById('view-calendar').classList.toggle('hidden', tab !== 'calendar');
+      document.getElementById('view-rules').classList.toggle('hidden', tab !== 'rules');
       document.getElementById('view-members').classList.toggle('hidden', tab !== 'members');
       document.getElementById('view-logs').classList.toggle('hidden', tab !== 'logs');
 
-      document.getElementById('tab-calendar').className = tab === 'calendar' ? 'px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-medium' : 'px-3 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800';
-      document.getElementById('tab-members').className = tab === 'members' ? 'px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-medium' : 'px-3 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800';
-      document.getElementById('tab-logs').className = tab === 'logs' ? 'px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-medium' : 'px-3 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800';
+      ['calendar', 'rules', 'members', 'logs'].forEach(t => {
+        const btn = document.getElementById(`tab-${t}`);
+        if (btn) {
+          btn.className = (t === tab)
+            ? 'px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-medium transition'
+            : 'px-3 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition';
+        }
+      });
 
       if (tab === 'calendar') renderCalendar();
+      if (tab === 'rules') renderRulesView();
       if (tab === 'members') renderMembers();
       if (tab === 'logs') renderAuditLogs();
     }
@@ -945,8 +1196,15 @@
       renderCalendar();
     }
 
+    function jumpToCurrentMonth() {
+      const now = new Date();
+      currentYear = now.getFullYear();
+      currentMonth = now.getMonth() + 1;
+      renderCalendar();
+    }
+
     function exportData() {
-      const data = { members, overrides, auditLogs, exportTime: new Date().toISOString() };
+      const data = { members, overrides, auditLogs, ruleConfigs, exportTime: new Date().toISOString() };
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -966,16 +1224,19 @@
           if (imported.members) members = imported.members;
           if (imported.overrides) overrides = imported.overrides;
           if (imported.auditLogs) auditLogs = imported.auditLogs;
+          if (imported.ruleConfigs) ruleConfigs = imported.ruleConfigs;
 
           localStorage.setItem('duty_members', JSON.stringify(members));
-          localStorage.setItem('dutyㄇ_overrides', JSON.stringify(overrides));
+          localStorage.setItem('duty_overrides', JSON.stringify(overrides));
           localStorage.setItem('duty_audit_logs', JSON.stringify(auditLogs));
+          localStorage.setItem('duty_rule_configs', JSON.stringify(ruleConfigs));
 
           syncToFirebase();
           renderCalendar();
+          renderRulesView();
           renderMembers();
           renderAuditLogs();
-          alert('同步備份資料已成功匯入！');
+          alert('備份資料已成功匯入並同步至雲端！');
         } catch (err) {
           alert('匯入失敗：檔案格式不正確！');
         }
@@ -983,10 +1244,11 @@
       reader.readAsText(file);
     }
 
-    // 系統啟動
+    // 系統開箱啟動
     window.onload = () => {
       initFirebase();
       renderCalendar();
+      renderRulesView();
       renderMembers();
       renderAuditLogs();
     };
