@@ -1,43 +1,3 @@
-Note: the links and images in this document may point to external sources. Please review them before opening.
-
-部門自動化排班系統（Firebase 雙向即時同步 + 自訂輪替規則與當月啟動版）
-
-本系統提供單一檔案即可運行的完整 Web 應用程式，並已深度整合 Firebase Realtime Database，解決同事間跨電腦、跨瀏覽器無法即時同步的問題。
-
-🚀 三步快速上線與同步流程
-
-第一步：申請免費 Firebase 即時資料庫（只需 3 分鐘）
-
-前往 Firebase Console 並以 Google 帳號登入。
-
-點擊 「新增專案」，輸入專案名稱（例如 dept-duty-roster），關閉 Google Analytics 後建立專案。
-
-進入專案首頁，點選 「Web（網頁圖示 </>）」 新增應用程式，註冊後會看到一串 firebaseConfig 金鑰設定（包含 apiKey、databaseURL 等）。
-
-在左側選單點擊 「建構 (Build)」➔「Realtime Database」➔「建立資料庫」：
-
-地點選擇預設（或新加坡 asia-southeast1）。
-
-安全性規則選擇 「以測試模式啟動 (Start in test mode)」（允許同仁讀取與寫入），點選啟用。
-
-將專案產生的 firebaseConfig 數值替換到下方 HTML 程式碼中的 firebaseConfig 區塊（下方已為您預先填入您提供的真實金鑰）。
-
-第二步：將檔案上傳至 GitHub Pages（免費專屬網址）
-
-前往 GitHub 登入並點擊右上角 「New repository」。
-
-Repository 名稱設為 duty-roster，權限設為 Public，點擊 Create repository。
-
-點選 「uploading an existing file」，將存好的 index.html 上傳並提交（Commit changes）。
-
-進入倉庫的 「Settings」➔ 左側「Pages」：
-
-在 Branch 處選擇 main 分支與 /root 資料夾，點選 Save。
-
-等候 1~2 分鐘後重新整理頁面，頂部會顯示綠色勾勾與您的專屬網址（例如：https://your-name.github.io/duty-roster/），將此網址發給部門同仁即可開始使用！
-
-完整 HTML 單一檔案原始碼（內建當月預設啟動 + 四軌規則自訂 + 下拉式選單修改者）
-
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -1317,14 +1277,3 @@ Repository 名稱設為 duty-roster，權限設為 Public，點擊 Create reposi
   </script>
 </body>
 </html>
-
-
-Sources
-
-臺灣期貨交易所股份有限公司函 - 中華民國116年期貨集中交易市場開（休）市日期表
-
-2027行事曆-人事行政總處116年行事曆
-
-中華民國116年（西元2027年）政府行政機關辦公日曆表放假及補假公告
-
-2027行事曆》春節休7天、連假共9個 116年國定假日請休完整指南
